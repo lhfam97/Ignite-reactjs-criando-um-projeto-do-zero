@@ -38,6 +38,23 @@
   h3:first-of-type {
     margin-top: 2rem;
   }
+  .previewButton {
+    display: block;
+    margin: 5rem auto;
+    width: 100%;
+    max-width: 700px;
+    height: 58px;
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 22px;
+    background: var(--gray-100);
+    border: 0;
+    border-radius: 0.5rem;
+    transition: filter 0.2s;
+    &:hover {
+      filter: brightness(0.8);
+    }
+  }
   // .postContent {
   //   max-width: 700px;
   //   margin-top: 2rem;
@@ -60,4 +77,30 @@
   //     -webkit-text-fill-color: transparent;
   //   }
   // }
+  .navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--gray-800);
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 400;
+      color: var(--white-500);
+      margin-bottom: 0.5rem;
+    }
+
+    a {
+      color: var(--pink-500);
+      font-weight: 600;
+    }
+
+    div {
+      padding-top: 3rem;
+    }
+
+    div + div {
+      text-align: right;
+    }
+  }
 }

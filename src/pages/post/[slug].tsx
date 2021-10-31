@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-no-undef */
 /* eslint-disable no-return-assign */
 /* eslint-disable no-param-reassign */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
@@ -8,10 +9,14 @@ import ptBR from 'date-fns/locale/pt-BR';
 import { FiCalendar, FiUser, FiClock } from 'react-icons/fi';
 import { useRouter } from 'next/router';
 import Prismic from '@prismicio/client';
+
+import Link from 'next/link';
 import { getPrismicClient } from '../../services/prismic';
 import Header from '../../components/Header';
-import commonStyles from '../../styles/common.module.scss';
+
 import styles from './post.module.scss';
+import commonStyles from '../../styles/common.module.scss';
+import Comments from '../../components/Comments';
 
 interface Post {
   first_publication_date: string | null;
@@ -33,10 +38,29 @@ interface Post {
 
 interface PostProps {
   post: Post;
+  navigation: {
+    prevPost: {
+      uid: string;
+      data: {
+        title: string;
+      };
+    }[];
+    nextPost: {
+      uid: string;
+      data: {
+        title: string;
+      };
+    }[];
+  };
+  preview: boolean;
 }
 
-export default function Post({ post }: PostProps) {
+export default function Post({ post, navigation, preview }: PostProps) {
   const router = useRouter();
+
+  const handleExitPreview = () => {
+    router.push('/api/exit-preview');
+  };
   if (router.isFallback) {
     return <h1>Carregando...</h1>;
   }
@@ -92,10 +116,37 @@ export default function Post({ post }: PostProps) {
                 </div>
               );
             })}
-          {/* <div
-            className={styles.postContent}
-            dangerouslySetInnerHTML={{ __html: post.data.content }}
-          /> */}
+          <section className={`${styles.navigation} ${commonStyles.container}`}>
+            {navigation?.prevPost.length > 0 && (
+              <div>
+                <h3>{navigation.prevPost[0].data.title}</h3>
+                <Link href={`/post/${navigation.prevPost[0].uid}`}>
+                  <a>Post anterior</a>
+                </Link>
+              </div>
+            )}
+
+            {navigation?.nextPost.length > 0 && (
+              <div>
+                <h3>{navigation.nextPost[0].data.title}</h3>
+                <Link href={`/post/${navigation.nextPost[0].uid}`}>
+                  <a>Próximo post</a>
+                </Link>
+              </div>
+            )}
+          </section>
+          <Comments />
+          {preview && (
+            <aside>
+              <button
+                onClick={handleExitPreview}
+                className={styles.previewButton}
+                type="button"
+              >
+                Sair do modo Preview
+              </button>
+            </aside>
+          )}
         </article>
       </main>
     </>
@@ -128,12 +179,35 @@ export const getStaticPaths: GetStaticPaths = async () => {
   };
 };
 
-export const getStaticProps: GetStaticProps = async ({ params }) => {
+export const getStaticProps: GetStaticProps = async ({
+  params,
+  preview = false,
+  previewData,
+}) => {
   const { slug } = params;
   const prismic = getPrismicClient();
 
-  const response = await prismic.getByUID('posts', String(slug), {});
+  const response = await prismic.getByUID('posts', String(slug), {
+    ref: previewData?.ref || null,
+  });
 
+  const prevPost = await prismic.query(
+    [Prismic.Predicates.at('document.type', 'posts')],
+    {
+      pageSize: 1,
+      after: response.id,
+      orderings: '[document.first_publication_date]',
+    }
+  );
+
+  const nextPost = await prismic.query(
+    [Prismic.Predicates.at('document.type', 'posts')],
+    {
+      pageSize: 1,
+      after: response.id,
+      orderings: '[document.last_publication_date desc]',
+    }
+  );
   const post = {
     uid: response.uid,
     first_publication_date: response.first_publication_date,
@@ -153,7 +227,14 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
     },
   };
   return {
-    props: { post },
+    props: {
+      post,
+      navigation: {
+        prevPost: prevPost?.results,
+        nextPost: nextPost?.results,
+      },
+      preview,
+    },
     revalidate: 60 * 30, // 30 minutes
   };
 };
